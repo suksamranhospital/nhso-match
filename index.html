@@ -56,10 +56,6 @@
     <p class="card-label">ขั้นตอนที่ 1 — ไฟล์ Visit List จาก HOSxP</p>
     <div class="col-tags">
       <span class="tag">คอลัมน์ F = CID</span>
-      <span class="tag">คอลัมน์ G = (ว่าง)</span>
-      <span class="tag">คอลัมน์ H = AUTHENCODE</span>
-      <span class="tag">คอลัมน์ I = ENDPOINT</span>
-      <span class="tag">คอลัมน์ J = (ว่าง)</span>
     </div>
     <div class="drop-zone" id="drop1" onclick="document.getElementById('file1').click()">
       <div class="drop-text" id="label1">วางไฟล์ที่นี่ หรือ คลิกเพื่อเลือก (.xlsx / .xls)</div>
@@ -151,16 +147,14 @@ function process() {
 
   setTimeout(() => {
     try {
-      // อ่านไฟล์ที่ 2
+      // อ่านไฟล์ที่ 2 สร้าง map
       const wb2 = XLSX.read(wb2Data, {type:'array'});
-      const ws2 = wb2.Sheets[wb2.SheetNames[0]];
-      const rows2 = XLSX.utils.sheet_to_json(ws2, {header:1, defval:''});
+      const rows2 = XLSX.utils.sheet_to_json(wb2.Sheets[wb2.SheetNames[0]], {header:1, defval:''});
 
       const authenMap = {}, endpointMap = {};
       for (let i = 1; i < rows2.length; i++) {
-        const row = rows2[i];
-        const cid  = String(row[2]  || '').trim(); // col C
-        const code = String(row[9]  || '').trim(); // col J
+        const cid  = String(rows2[i][2]  || '').trim(); // col C (index 2)
+        const code = String(rows2[i][9]  || '').trim(); // col J (index 9)
         if (!cid || !code) continue;
         const pfx = code.substring(0,2).toUpperCase();
         if (pfx === 'PP') { authenMap[cid]   = authenMap[cid]   || []; authenMap[cid].push(code); }
@@ -169,60 +163,70 @@ function process() {
 
       // อ่านไฟล์ที่ 1
       const wb1 = XLSX.read(wb1Data, {type:'array'});
-      const ws1 = wb1.Sheets[wb1.SheetNames[0]];
-      const rows1 = XLSX.utils.sheet_to_json(ws1, {header:1, defval:''});
+      const rows1 = XLSX.utils.sheet_to_json(wb1.Sheets[wb1.SheetNames[0]], {header:1, defval:''});
 
-      // Layout:
-      // F(5) = CID (เดิม)
-      // G(6) = ว่าง  (เว้น 1 คอลัมน์หน้า AUTHENCODE)
-      // H(7) = AUTHENCODE
-      // I(8) = ENDPOINT
-      // J(9) = ว่าง  (เว้น 1 คอลัมน์หลัง ENDPOINT)
-      // ข้อมูลเดิมที่ G เป็นต้นไปจะเลื่อนออกไปทางขวา 4 ช่อง (splice 4 ตัว)
+      // โครงสร้างผลลัพธ์:
+      // ข้อมูลเดิม A-E (index 0-4) คงไว้
+      // index 5 (F) = ว่าง
+      // index 6 (G) = CID (จากคอลัมน์ F เดิม = index 5)
+      // index 7 (H) = AUTHENCODE
+      // index 8 (I) = ENDPOINT
+      // index 9 (J) = ว่าง
+      // index 10+ (K+) = ข้อมูลเดิมตั้งแต่ G เป็นต้นไป (index 6+)
 
-      const F=5, G=6, H=7, I_COL=8, J_COL=9;
       const output = [];
 
       for (let i = 0; i < rows1.length; i++) {
         const src = rows1[i] ? [...rows1[i]] : [];
-        while (src.length <= F) src.push('');
+
+        // ดึง A-E (index 0-4) และ G+ (index 6+) แยกกัน
+        // CID อยู่ที่ index 5 (คอลัมน์ F เดิม)
+        while (src.length <= 5) src.push('');
+
+        const colAtoE  = src.slice(0, 5);   // A–E เดิม
+        const cidVal   = src[5];             // F เดิม = CID
+        const restCols = src.slice(6);       // G+ เดิม
+
+        let blankF = '', authenVal = '', endpointVal = '', blankJ = '';
 
         if (i === 0) {
-          // header row
-          src.splice(G, 0, '', 'AUTHENCODE', 'ENDPOINT', '');
+          // header
+          authenVal   = 'AUTHENCODE';
+          endpointVal = 'ENDPOINT';
         } else {
-          const cid = String(src[F] || '').trim();
-          const a   = (cid && authenMap[cid])   ? authenMap[cid].join(', ')   : '';
-          const ep  = (cid && endpointMap[cid]) ? endpointMap[cid].join(', ') : '';
-          src.splice(G, 0, '', a, ep, '');
+          const cid = String(cidVal || '').trim();
+          authenVal   = (cid && authenMap[cid])   ? authenMap[cid].join(', ')   : '';
+          endpointVal = (cid && endpointMap[cid]) ? endpointMap[cid].join(', ') : '';
         }
-        output.push(src);
+
+        // สร้าง row ใหม่: A-E | ว่าง(F) | CID(G) | AUTHENCODE(H) | ENDPOINT(I) | ว่าง(J) | ข้อมูลเดิม G+(K+)
+        const newRow = [...colAtoE, blankF, cidVal, authenVal, endpointVal, blankJ, ...restCols];
+        output.push(newRow);
       }
 
       // สร้าง worksheet
       const wsOut = XLSX.utils.aoa_to_sheet(output);
 
-      // column widths
+      // กำหนดความกว้างคอลัมน์
       wsOut['!cols'] = wsOut['!cols'] || [];
-      wsOut['!cols'][F]     = {wch:18};
-      wsOut['!cols'][G]     = {wch:4};
-      wsOut['!cols'][H]     = {wch:32};
-      wsOut['!cols'][I_COL] = {wch:32};
-      wsOut['!cols'][J_COL] = {wch:4};
+      wsOut['!cols'][5] = {wch:4};   // F ว่าง
+      wsOut['!cols'][6] = {wch:18};  // G CID
+      wsOut['!cols'][7] = {wch:32};  // H AUTHENCODE
+      wsOut['!cols'][8] = {wch:32};  // I ENDPOINT
+      wsOut['!cols'][9] = {wch:4};   // J ว่าง
 
       const wbOut = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wbOut, wsOut, 'Sheet1');
-
       const wbArray = XLSX.write(wbOut, {bookType:'xlsx', type:'array'});
       resultBlob = new Blob([wbArray], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 
       // สรุป
       let cntTotal=0, hasBoth=0, missingA=0, missingEP=0;
       for (let i = 1; i < output.length; i++) {
-        const cid = String(output[i][F] || '').trim();
+        const cid = String(output[i][6] || '').trim(); // G = index 6
         if (!cid) continue;
-        const a  = String(output[i][H]     || '');
-        const ep = String(output[i][I_COL] || '');
+        const a  = String(output[i][7] || ''); // H
+        const ep = String(output[i][8] || ''); // I
         cntTotal++;
         if (a && ep) hasBoth++;
         if (!a)      missingA++;

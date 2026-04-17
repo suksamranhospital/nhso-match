@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AUTHENCODE & ENDPOINT Matcher</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: #f5f5f0;
+    color: #1a1a1a;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+  .container {
+    max-width: 640px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: #888;
+    margin-top: 4px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    border: 0.5px solid #ddd;
+    padding: 1.25rem;
+  }
+  .card-label {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 12px;
+  }
+  .drop-zone {
+    border: 1.5px dashed #bbb;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    user-select: none;
+  }
+  .drop-zone:hover { background: #f0f7ff; border-color: #7aaeee; }
+  .drop-zone.active { background: #e8f4ff; border-color: #3b82f6; }
+  .drop-zone.done { border-color: #22c55e; border-style: solid; }
+  .drop-text { font-size: 14px; color: #888; }
+  .drop-text.success { color: #16a34a; font-weight: 500; }
+  .run-btn {
+    width: 100%;
+    padding: 0.85rem;
+    font-size: 15px;
+    font-weight: 600;
+    background: #1d4ed8;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+  }
+  .run-btn:disabled { background: #94a3b8; cursor: not-allowed; opacity: 0.6; }
+  .run-btn:not(:disabled):hover { background: #1e40af; }
+  .summary {
+    display: none;
+    background: #fff;
+    border-radius: 12px;
+    border: 0.5px solid #ddd;
+    padding: 1.25rem;
+  }
+  .summary-title { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .stat-card {
+    background: #f8f8f5;
+    border-radius: 8px;
+    padding: 0.9rem;
+    text-align: center;
+  }
+  .stat-num { font-size: 24px; font-weight: 600; }
+  .stat-num.green { color: #16a34a; }
+  .stat-num.orange { color: #d97706; }
+  .stat-num.gray { color: #374151; }
+  .stat-desc { font-size: 12px; color: #666; margin-top: 4px; line-height: 1.4; }
+  .note {
+    font-size: 12px;
+    color: #999;
+    background: #fafaf7;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    border-left: 3px solid #e5e7eb;
+    line-height: 1.6;
+  }
+  .note strong { color: #555; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div>
+    <h1>AUTHENCODE &amp; ENDPOINT Match</h1>
+    <p class="subtitle">จับคู่ข้อมูล HIS กับ NHSO New Authen System</p>
+  </div>
+
+  <div class="card">
+    <p class="card-label">ขั้นตอนที่ 1 — ไฟล์จาก HIS <span style="color:#aaa">(CID อยู่ในคอลัมน์ A)</span></p>
+    <div class="drop-zone" id="drop1" onclick="document.getElementById('file1').click()">
+      <div class="drop-text" id="label1">วางไฟล์ที่นี่ หรือ คลิกเพื่อเลือก (.xlsx / .xls)</div>
+    </div>
+    <input type="file" id="file1" accept=".xlsx,.xls" style="display:none;">
+  </div>
+
+  <div class="card">
+    <p class="card-label">ขั้นตอนที่ 2 — ไฟล์จาก NHSO New Authen <span style="color:#aaa">(CID คอลัมน์ D | ClaimCode คอลัมน์ J | ประเภท คอลัมน์ S)</span></p>
+    <div class="drop-zone" id="drop2" onclick="document.getElementById('file2').click()">
+      <div class="drop-text" id="label2">วางไฟล์ที่นี่ หรือ คลิกเพื่อเลือก (.xlsx / .xls)</div>
+    </div>
+    <input type="file" id="file2" accept=".xlsx,.xls" style="display:none;">
+  </div>
+
+  <button class="run-btn" id="runBtn" disabled>ประมวลผลและดาวน์โหลด</button>
+
+  <div class="summary" id="summary">
+    <p class="summary-title">สรุปผล</p>
+    <div class="stats-grid" id="statsGrid"></div>
+  </div>
+
+  <div class="note">
+    <strong>หมายเหตุ:</strong> ไฟล์ทั้งสองต้องมี header row ในแถวแรก และข้อมูลเริ่มจากแถว 2<br>
+    ผลลัพธ์จะเพิ่ม <strong>คอลัมน์ L = AUTHENCODE</strong> และ <strong>คอลัมน์ M = ENDPOINT</strong> ในไฟล์ที่ 1<br>
+    หาก 1 CID มีหลาย code จะคั่นด้วยเครื่องหมาย <strong>,</strong>
+  </div>
+
+</div>
+
+<script>
+let wb1 = null, wb2 = null;
+
+function setupDrop(dropId, inputId, labelId, onLoad) {
+  const drop = document.getElementById(dropId);
+  const input = document.getElementById(inputId);
+  const label = document.getElementById(labelId);
+
+  input.addEventListener('change', e => {
+    if (e.target.files[0]) readFile(e.target.files[0], drop, label, onLoad);
+  });
+
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('active'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('active'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault();
+    drop.classList.remove('active');
+    if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0], drop, label, onLoad);
+  });
+}
+
+function readFile(file, drop, label, onLoad) {
+  label.textContent = '⏳ กำลังอ่านไฟล์ ' + file.name + '...';
+  const reader = new FileReader();
+  reader.onload = e => {
+    const wb = XLSX.read(e.target.result, { type: 'array' });
+    onLoad(wb);
+    label.textContent = '✓ ' + file.name;
+    label.classList.add('success');
+    drop.classList.add('done');
+    drop.classList.remove('active');
+    checkReady();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+setupDrop('drop1', 'file1', 'label1', wb => { wb1 = wb; });
+setupDrop('drop2', 'file2', 'label2', wb => { wb2 = wb; });
+
+function checkReady() {
+  const btn = document.getElementById('runBtn');
+  if (wb1 && wb2) btn.disabled = false;
+}
+
+document.getElementById('runBtn').addEventListener('click', process);
+
+function colIdx(letter) {
+  return letter.toUpperCase().charCodeAt(0) - 65;
+}
+
+function process() {
+  const btn = document.getElementById('runBtn');
+  btn.textContent = '⏳ กำลังประมวลผล...';
+  btn.disabled = true;
+
+  setTimeout(() => {
+    try {
+      const ws1 = wb1.Sheets[wb1.SheetNames[0]];
+      const ws2 = wb2.Sheets[wb2.SheetNames[0]];
+
+      const data1 = XLSX.utils.sheet_to_json(ws1, { header: 1, defval: '' });
+      const data2 = XLSX.utils.sheet_to_json(ws2, { header: 1, defval: '' });
+
+      // ไฟล์ที่ 1: CID อยู่คอลัมน์ A (index 0)
+      const A = colIdx('A');
+      // ไฟล์ที่ 2: CID=D, ClaimCode=J, ประเภท=S
+      const D = colIdx('D');
+      const J = colIdx('J');
+      const S = colIdx('S');
+      const L = colIdx('L');
+      const M = colIdx('M');
+
+      const authenMap = {};
+      const endpointMap = {};
+
+      for (let i = 1; i < data2.length; i++) {
+        const row = data2[i];
+        if (!row || row.length === 0) continue;
+        const cid = String(row[D] || '').trim();
+        const code = String(row[J] !== undefined ? row[J] : '').trim();
+        const type = String(row[S] || '').trim().toUpperCase();
+        if (!cid) continue;
+        if (type === 'AUTHENCODE') {
+          if (!authenMap[cid]) authenMap[cid] = [];
+          if (code) authenMap[cid].push(code);
+        } else if (type === 'ENDPOINT') {
+          if (!endpointMap[cid]) endpointMap[cid] = [];
+          if (code) endpointMap[cid].push(code);
+        }
+      }
+
+      // ใส่ header
+      if (data1[0]) {
+        data1[0][L] = 'AUTHENCODE';
+        data1[0][M] = 'ENDPOINT';
+      }
+
+      let hasAuthen = 0, hasEndpoint = 0, hasBoth = 0, hasMissing = 0;
+      const totalRows = data1.length - 1;
+
+      for (let i = 1; i < data1.length; i++) {
+        const row = data1[i];
+        if (!row || row.length === 0) continue;
+        const cid = String(row[A] || '').trim();
+        const a = authenMap[cid] ? authenMap[cid].join(', ') : '';
+        const ep = endpointMap[cid] ? endpointMap[cid].join(', ') : '';
+        data1[i][L] = a;
+        data1[i][M] = ep;
+
+        if (a) hasAuthen++;
+        if (ep) hasEndpoint++;
+        if (a && ep) hasBoth++;
+        if (!a || !ep) hasMissing++;
+      }
+
+      const newWs = XLSX.utils.aoa_to_sheet(data1);
+      const newWb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(newWb, newWs, 'Sheet1');
+      XLSX.writeFile(newWb, 'output_matched.xlsx');
+
+      document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-num green">${hasBoth}</div>
+          <div class="stat-desc">มีทั้ง AUTHENCODE และ ENDPOINT</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num orange">${hasMissing}</div>
+          <div class="stat-desc">ไม่ครบ (ขาดอย่างน้อย 1 รายการ)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num gray">${totalRows}</div>
+          <div class="stat-desc">CID ทั้งหมดในไฟล์ที่ 1</div>
+        </div>
+      `;
+      document.getElementById('summary').style.display = 'block';
+
+      btn.textContent = '✓ เสร็จแล้ว — ประมวลผลอีกครั้ง';
+      btn.disabled = false;
+
+    } catch (err) {
+      alert('เกิดข้อผิดพลาด: ' + err.message);
+      btn.textContent = 'ประมวลผลและดาวน์โหลด';
+      btn.disabled = false;
+    }
+  }, 50);
+}
+</script>
+</body>
+</html>

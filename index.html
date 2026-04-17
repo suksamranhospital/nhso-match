@@ -17,7 +17,6 @@
   .card-label{font-size:13px;color:#555;font-weight:600;margin-bottom:10px}
   .col-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
   .tag{font-size:11px;background:#f0f4ff;color:#3b55c0;border-radius:5px;padding:3px 8px;border:0.5px solid #c7d2fe}
-  .tag.yellow{background:#fefce8;color:#854d0e;border-color:#fde047;font-weight:700}
   .nhso-link{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:6px 14px;background:#eff6ff;border:0.5px solid #93c5fd;border-radius:7px;font-size:12px;font-weight:600;color:#1d4ed8;text-decoration:none;transition:background 0.15s}
   .nhso-link:hover{background:#dbeafe}
   .drop-zone{border:1.5px dashed #bbb;border-radius:8px;padding:1.4rem;text-align:center;cursor:pointer;transition:background 0.15s,border-color 0.15s;user-select:none}
@@ -39,8 +38,6 @@
   .stat-num{font-size:26px;font-weight:700}
   .stat-num.blue{color:#1d4ed8}.stat-num.green{color:#15803d}.stat-num.red{color:#dc2626}.stat-num.amber{color:#d97706}
   .stat-desc{font-size:11px;color:#666;margin-top:5px;line-height:1.4}
-  .output-schema{background:#f8fff8;border-radius:8px;border:0.5px solid #bbddc0;padding:0.85rem 1rem;font-size:12px;color:#444;line-height:2}
-  .output-schema strong{color:#15803d}
   .note{font-size:12px;color:#999;background:#fafaf7;border-radius:8px;padding:0.75rem 1rem;border-left:3px solid #e5e7eb;line-height:1.6}
   .note strong{color:#555}
 </style>
@@ -59,8 +56,10 @@
     <p class="card-label">ขั้นตอนที่ 1 — ไฟล์ Visit List จาก HOSxP</p>
     <div class="col-tags">
       <span class="tag">คอลัมน์ F = CID</span>
-      <span class="tag yellow">★ คอลัมน์ G ← AUTHENCODE (แทรกใหม่ highlight สีเหลือง)</span>
-      <span class="tag yellow">★ คอลัมน์ H ← ENDPOINT (แทรกใหม่ highlight สีเหลือง)</span>
+      <span class="tag">คอลัมน์ G = (ว่าง)</span>
+      <span class="tag">คอลัมน์ H = AUTHENCODE</span>
+      <span class="tag">คอลัมน์ I = ENDPOINT</span>
+      <span class="tag">คอลัมน์ J = (ว่าง)</span>
     </div>
     <div class="drop-zone" id="drop1" onclick="document.getElementById('file1').click()">
       <div class="drop-text" id="label1">วางไฟล์ที่นี่ หรือ คลิกเพื่อเลือก (.xlsx / .xls)</div>
@@ -81,12 +80,6 @@
       <div class="drop-text" id="label2">วางไฟล์ที่นี่ หรือ คลิกเพื่อเลือก (.xlsx / .xls)</div>
     </div>
     <input type="file" id="file2" accept=".xlsx,.xls" style="display:none">
-  </div>
-
-  <div class="output-schema">
-    <strong>โครงสร้างไฟล์ผลลัพธ์:</strong><br>
-    ข้อมูลเดิมในไฟล์ที่ 1 ครบถ้วน + แทรก <strong>คอลัมน์ G = AUTHENCODE</strong> และ <strong>คอลัมน์ H = ENDPOINT</strong><br>
-    คอลัมน์ F, G, H จะมี <strong>พื้นหลังสีเหลือง + ตัวหนา</strong>
   </div>
 
   <button class="btn-run" id="runBtn" disabled>ประมวลผล</button>
@@ -148,20 +141,6 @@ document.getElementById('dlBtn').addEventListener('click', () => {
   URL.revokeObjectURL(url);
 });
 
-function cellAddr(r, c) {
-  // r=0-based row, c=0-based col → e.g. {r:0,c:6} = "G1"
-  return XLSX.utils.encode_cell({r: r, c: c});
-}
-
-function applyYellow(ws, r, c) {
-  var addr = cellAddr(r, c);
-  if (!ws[addr]) ws[addr] = {t:'s', v:''};
-  ws[addr].s = {
-    fill: { patternType:'solid', fgColor:{rgb:'FFFF00'}, bgColor:{rgb:'FFFF00'} },
-    font: { bold:true, sz:11 }
-  };
-}
-
 function process() {
   const btn   = document.getElementById('runBtn');
   const dlBtn = document.getElementById('dlBtn');
@@ -180,12 +159,12 @@ function process() {
       const authenMap = {}, endpointMap = {};
       for (let i = 1; i < rows2.length; i++) {
         const row = rows2[i];
-        const cid  = String(row[2]  || '').trim(); // col C = index 2
-        const code = String(row[9]  || '').trim(); // col J = index 9
+        const cid  = String(row[2]  || '').trim(); // col C
+        const code = String(row[9]  || '').trim(); // col J
         if (!cid || !code) continue;
         const pfx = code.substring(0,2).toUpperCase();
-        if (pfx === 'PP') { authenMap[cid]   = (authenMap[cid]   || []); authenMap[cid].push(code); }
-        if (pfx === 'EP') { endpointMap[cid] = (endpointMap[cid] || []); endpointMap[cid].push(code); }
+        if (pfx === 'PP') { authenMap[cid]   = authenMap[cid]   || []; authenMap[cid].push(code); }
+        if (pfx === 'EP') { endpointMap[cid] = endpointMap[cid] || []; endpointMap[cid].push(code); }
       }
 
       // อ่านไฟล์ที่ 1
@@ -193,60 +172,57 @@ function process() {
       const ws1 = wb1.Sheets[wb1.SheetNames[0]];
       const rows1 = XLSX.utils.sheet_to_json(ws1, {header:1, defval:''});
 
-      // สร้าง output array — แทรก G(idx6) และ H(idx7)
-      const F = 5, G = 6, H = 7;
+      // Layout:
+      // F(5) = CID (เดิม)
+      // G(6) = ว่าง  (เว้น 1 คอลัมน์หน้า AUTHENCODE)
+      // H(7) = AUTHENCODE
+      // I(8) = ENDPOINT
+      // J(9) = ว่าง  (เว้น 1 คอลัมน์หลัง ENDPOINT)
+      // ข้อมูลเดิมที่ G เป็นต้นไปจะเลื่อนออกไปทางขวา 4 ช่อง (splice 4 ตัว)
+
+      const F=5, G=6, H=7, I_COL=8, J_COL=9;
       const output = [];
 
       for (let i = 0; i < rows1.length; i++) {
         const src = rows1[i] ? [...rows1[i]] : [];
         while (src.length <= F) src.push('');
+
         if (i === 0) {
-          src.splice(G, 0, 'AUTHENCODE', 'ENDPOINT');
+          // header row
+          src.splice(G, 0, '', 'AUTHENCODE', 'ENDPOINT', '');
         } else {
           const cid = String(src[F] || '').trim();
-          const a   = authenMap[cid]   ? authenMap[cid].join(', ')   : '';
-          const ep  = endpointMap[cid] ? endpointMap[cid].join(', ') : '';
-          src.splice(G, 0, a, ep);
+          const a   = (cid && authenMap[cid])   ? authenMap[cid].join(', ')   : '';
+          const ep  = (cid && endpointMap[cid]) ? endpointMap[cid].join(', ') : '';
+          src.splice(G, 0, '', a, ep, '');
         }
         output.push(src);
       }
 
-      // สร้าง worksheet ใหม่
+      // สร้าง worksheet
       const wsOut = XLSX.utils.aoa_to_sheet(output);
-
-      // ใส่ cell style ทีละ cell สำหรับ F, G, H ทุกแถว
-      // SheetJS Community รองรับ style เมื่อใช้ writeFile ด้วย {bookType:'xlsx', cellStyles:true}
-      for (let r = 0; r < output.length; r++) {
-        [F, G, H].forEach(c => {
-          const addr = XLSX.utils.encode_cell({r, c});
-          if (!wsOut[addr]) wsOut[addr] = {t:'s', v:''};
-          wsOut[addr].s = {
-            fill: { patternType:'solid', fgColor:{rgb:'FFFF00'}, bgColor:{rgb:'FFFF00'} },
-            font: { bold:true, sz:11 }
-          };
-        });
-      }
 
       // column widths
       wsOut['!cols'] = wsOut['!cols'] || [];
-      wsOut['!cols'][F] = {wch:18};
-      wsOut['!cols'][G] = {wch:32};
-      wsOut['!cols'][H] = {wch:32};
+      wsOut['!cols'][F]     = {wch:18};
+      wsOut['!cols'][G]     = {wch:4};
+      wsOut['!cols'][H]     = {wch:32};
+      wsOut['!cols'][I_COL] = {wch:32};
+      wsOut['!cols'][J_COL] = {wch:4};
 
       const wbOut = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wbOut, wsOut, 'Sheet1');
 
-      // เขียนเป็น binary array
-      const wbArray = XLSX.write(wbOut, {bookType:'xlsx', type:'array', cellStyles:true});
+      const wbArray = XLSX.write(wbOut, {bookType:'xlsx', type:'array'});
       resultBlob = new Blob([wbArray], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 
-      // คำนวณสรุป
+      // สรุป
       let cntTotal=0, hasBoth=0, missingA=0, missingEP=0;
       for (let i = 1; i < output.length; i++) {
         const cid = String(output[i][F] || '').trim();
         if (!cid) continue;
-        const a  = String(output[i][G] || '');
-        const ep = String(output[i][H] || '');
+        const a  = String(output[i][H]     || '');
+        const ep = String(output[i][I_COL] || '');
         cntTotal++;
         if (a && ep) hasBoth++;
         if (!a)      missingA++;

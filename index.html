@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AUTHENCODE & ENDPOINT Matcher</title>
+<title>AUTHENCODE & ENDPOINT Matcher — รพ.สุขสำราญ</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -15,21 +15,40 @@
     padding: 2rem 1rem;
   }
   .container {
-    max-width: 640px;
+    max-width: 680px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
   }
-  h1 { font-size: 20px; font-weight: 600; color: #1a1a1a; }
-  .subtitle { font-size: 13px; color: #888; margin-top: 4px; }
+
+  /* Header */
+  .header {
+    background: #fff;
+    border-radius: 14px;
+    border: 0.5px solid #ddd;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .header img {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .header-text h1 { font-size: 18px; font-weight: 700; color: #1a1a1a; line-height: 1.3; }
+  .header-text p  { font-size: 12px; color: #888; margin-top: 3px; }
+
+  /* Cards */
   .card {
     background: #fff;
     border-radius: 12px;
     border: 0.5px solid #ddd;
     padding: 1.25rem;
   }
-  .card-label { font-size: 13px; color: #666; margin-bottom: 10px; }
+  .card-label { font-size: 13px; color: #555; font-weight: 600; margin-bottom: 10px; }
   .col-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
   .tag {
     font-size: 11px;
@@ -39,33 +58,40 @@
     padding: 3px 8px;
     border: 0.5px solid #c7d2fe;
   }
+  .tag.green { background: #f0fff4; color: #166534; border-color: #bbf7d0; }
+
+  /* Drop zone */
   .drop-zone {
     border: 1.5px dashed #bbb;
     border-radius: 8px;
-    padding: 1.5rem;
+    padding: 1.4rem;
     text-align: center;
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
     user-select: none;
   }
-  .drop-zone:hover { background: #f0f7ff; border-color: #7aaeee; }
+  .drop-zone:hover  { background: #f0f7ff; border-color: #7aaeee; }
   .drop-zone.active { background: #e8f4ff; border-color: #3b82f6; }
-  .drop-zone.done { border-color: #22c55e; border-style: solid; }
-  .drop-text { font-size: 14px; color: #888; }
-  .drop-text.success { color: #16a34a; font-weight: 500; }
-  .btn {
+  .drop-zone.done   { border-color: #22c55e; border-style: solid; }
+  .drop-text         { font-size: 13px; color: #888; }
+  .drop-text.success { color: #16a34a; font-weight: 600; }
+
+  /* Buttons */
+  .btn-run {
     width: 100%;
     padding: 0.85rem;
     font-size: 15px;
     font-weight: 600;
+    background: #1d4ed8;
+    color: #fff;
     border: none;
     border-radius: 10px;
     cursor: pointer;
-    transition: background 0.15s, opacity 0.15s;
+    transition: background 0.15s;
   }
-  .btn-primary { background: #1d4ed8; color: #fff; }
-  .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; opacity: 0.6; }
-  .btn-primary:not(:disabled):hover { background: #1e40af; }
+  .btn-run:disabled { background: #94a3b8; cursor: not-allowed; }
+  .btn-run:not(:disabled):hover { background: #1e40af; }
+
   .btn-download {
     display: none;
     width: 100%;
@@ -80,6 +106,8 @@
     transition: background 0.15s;
   }
   .btn-download:hover { background: #166534; }
+
+  /* Summary */
   .summary {
     display: none;
     background: #fff;
@@ -87,24 +115,54 @@
     border: 0.5px solid #ddd;
     padding: 1.25rem;
   }
-  .summary-title { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
-  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  .stat-card { background: #f8f8f5; border-radius: 8px; padding: 0.9rem; text-align: center; }
-  .stat-num { font-size: 24px; font-weight: 600; }
-  .stat-num.green { color: #16a34a; }
-  .stat-num.orange { color: #d97706; }
-  .stat-num.gray { color: #374151; }
-  .stat-desc { font-size: 12px; color: #666; margin-top: 4px; line-height: 1.4; }
+  .summary-title { font-size: 13px; font-weight: 700; margin-bottom: 12px; color: #333; }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  @media (max-width: 520px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .stat-card {
+    background: #f8f8f5;
+    border-radius: 8px;
+    padding: 0.85rem 0.5rem;
+    text-align: center;
+    border: 0.5px solid #eee;
+  }
+  .stat-num       { font-size: 26px; font-weight: 700; }
+  .stat-num.blue  { color: #1d4ed8; }
+  .stat-num.green { color: #15803d; }
+  .stat-num.red   { color: #dc2626; }
+  .stat-num.amber { color: #d97706; }
+  .stat-desc { font-size: 11px; color: #666; margin-top: 5px; line-height: 1.4; }
+
+  /* Output schema */
   .output-schema {
     background: #f8fff8;
     border-radius: 8px;
     border: 0.5px solid #bbddc0;
-    padding: 0.9rem 1rem;
+    padding: 0.85rem 1rem;
     font-size: 12px;
     color: #444;
-    line-height: 1.8;
+    line-height: 1.9;
   }
   .output-schema strong { color: #15803d; }
+
+  /* Logic note */
+  .logic-box {
+    background: #fffbeb;
+    border-radius: 8px;
+    border: 0.5px solid #fcd34d;
+    padding: 0.85rem 1rem;
+    font-size: 12px;
+    color: #78350f;
+    line-height: 1.8;
+  }
+  .logic-box strong { color: #92400e; }
+
+  /* Footer note */
   .note {
     font-size: 12px;
     color: #999;
@@ -120,11 +178,23 @@
 <body>
 <div class="container">
 
-  <div>
-    <h1>AUTHENCODE &amp; ENDPOINT Matcher</h1>
-    <p class="subtitle">จับคู่ข้อมูล HIS กับ NHSO New Authen System</p>
+  <!-- Header with Logo -->
+  <div class="header">
+    <img src="data:image/jpeg;base64,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" alt="โรงพยาบาลสุขสำราญ">
+    <div class="header-text">
+      <h1>โรงพยาบาลสุขสำราญ</h1>
+      <p>AUTHENCODE &amp; ENDPOINT Matcher — ระบบตรวจสอบการยืนยันตัวตน NHSO</p>
+    </div>
   </div>
 
+  <!-- Logic explanation -->
+  <div class="logic-box">
+    <strong>เงื่อนไขการแยกประเภท (จากคอลัมน์ J):</strong><br>
+    ขึ้นต้นด้วย <strong>PP</strong> → นับเป็น <strong>AUTHENCODE</strong><br>
+    ขึ้นต้นด้วย <strong>EP</strong> → นับเป็น <strong>ENDPOINT</strong>
+  </div>
+
+  <!-- File 1 -->
   <div class="card">
     <p class="card-label">ขั้นตอนที่ 1 — ไฟล์จาก HIS</p>
     <div class="col-tags">
@@ -136,12 +206,12 @@
     <input type="file" id="file1" accept=".xlsx,.xls" style="display:none;">
   </div>
 
+  <!-- File 2 -->
   <div class="card">
     <p class="card-label">ขั้นตอนที่ 2 — ไฟล์จาก NHSO New Authen</p>
     <div class="col-tags">
       <span class="tag">คอลัมน์ C = CID</span>
-      <span class="tag">คอลัมน์ J = ClaimCode</span>
-      <span class="tag">คอลัมน์ S = ประเภท</span>
+      <span class="tag">คอลัมน์ J = ClaimCode (PP.../EP...)</span>
     </div>
     <div class="drop-zone" id="drop2" onclick="document.getElementById('file2').click()">
       <div class="drop-text" id="label2">วางไฟล์ที่นี่ หรือ คลิกเพื่อเลือก (.xlsx / .xls)</div>
@@ -149,13 +219,15 @@
     <input type="file" id="file2" accept=".xlsx,.xls" style="display:none;">
   </div>
 
+  <!-- Output schema -->
   <div class="output-schema">
     <strong>โครงสร้างไฟล์ผลลัพธ์:</strong><br>
     คอลัมน์ A = CID &nbsp;|&nbsp; คอลัมน์ B = AUTHENCODE &nbsp;|&nbsp; คอลัมน์ C = ENDPOINT
   </div>
 
-  <button class="btn btn-primary" id="runBtn" disabled>ประมวลผล</button>
+  <button class="btn-run" id="runBtn" disabled>ประมวลผล</button>
 
+  <!-- Summary -->
   <div class="summary" id="summary">
     <p class="summary-title">สรุปผล</p>
     <div class="stats-grid" id="statsGrid"></div>
@@ -177,15 +249,13 @@ function setupDrop(dropId, inputId, labelId, onLoad) {
   const drop  = document.getElementById(dropId);
   const input = document.getElementById(inputId);
   const label = document.getElementById(labelId);
-
   input.addEventListener('change', e => {
     if (e.target.files[0]) readFile(e.target.files[0], drop, label, onLoad);
   });
   drop.addEventListener('dragover',  e => { e.preventDefault(); drop.classList.add('active'); });
   drop.addEventListener('dragleave', ()  => drop.classList.remove('active'));
   drop.addEventListener('drop', e => {
-    e.preventDefault();
-    drop.classList.remove('active');
+    e.preventDefault(); drop.classList.remove('active');
     if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0], drop, label, onLoad);
   });
 }
@@ -217,13 +287,13 @@ document.getElementById('dlBtn').addEventListener('click', () => {
   if (resultWb) XLSX.writeFile(resultWb, 'output_matched.xlsx');
 });
 
-function ci(letter) { return letter.toUpperCase().charCodeAt(0) - 65; }
+function ci(l) { return l.toUpperCase().charCodeAt(0) - 65; }
 
 function process() {
-  const btn  = document.getElementById('runBtn');
+  const btn   = document.getElementById('runBtn');
   const dlBtn = document.getElementById('dlBtn');
-  btn.textContent  = '⏳ กำลังประมวลผล...';
-  btn.disabled     = true;
+  btn.textContent = '⏳ กำลังประมวลผล...';
+  btn.disabled    = true;
   dlBtn.style.display = 'none';
   resultWb = null;
 
@@ -232,7 +302,7 @@ function process() {
       const data1 = XLSX.utils.sheet_to_json(wb1.Sheets[wb1.SheetNames[0]], { header: 1, defval: '' });
       const data2 = XLSX.utils.sheet_to_json(wb2.Sheets[wb2.SheetNames[0]], { header: 1, defval: '' });
 
-      // ไฟล์ที่ 2: CID=C(2), ClaimCode=J(9), ประเภท=S(18)
+      // ไฟล์ที่ 2: CID=C(2), ClaimCode=J(9) — แยกประเภทจากตัวนำหน้าใน J
       const authenMap   = {};
       const endpointMap = {};
 
@@ -241,20 +311,22 @@ function process() {
         if (!row || !row.length) continue;
         const cid  = String(row[ci('C')] || '').trim();
         const code = String(row[ci('J')] !== undefined ? row[ci('J')] : '').trim();
-        const type = String(row[ci('S')] || '').trim().toUpperCase();
-        if (!cid) continue;
-        if (type === 'AUTHENCODE') {
+        if (!cid || !code) continue;
+
+        const prefix = code.substring(0, 2).toUpperCase();
+
+        if (prefix === 'PP') {
           if (!authenMap[cid])   authenMap[cid] = [];
-          if (code) authenMap[cid].push(code);
-        } else if (type === 'ENDPOINT') {
+          authenMap[cid].push(code);
+        } else if (prefix === 'EP') {
           if (!endpointMap[cid]) endpointMap[cid] = [];
-          if (code) endpointMap[cid].push(code);
+          endpointMap[cid].push(code);
         }
       }
 
-      // สร้างผลลัพธ์ใหม่: A=CID, B=AUTHENCODE, C=ENDPOINT
+      // สร้างผลลัพธ์: A=CID, B=AUTHENCODE, C=ENDPOINT
       const output = [['CID', 'AUTHENCODE', 'ENDPOINT']];
-      let hasBoth = 0, hasMissing = 0, totalRows = 0;
+      let totalRows = 0, hasBoth = 0, missingAuthen = 0, missingEndpoint = 0;
 
       for (let i = 1; i < data1.length; i++) {
         const row = data1[i];
@@ -267,8 +339,13 @@ function process() {
 
         output.push([cid, a, ep]);
         totalRows++;
-        if (a && ep)  hasBoth++;
-        if (!a || !ep) hasMissing++;
+
+        const hasA  = a  !== '';
+        const hasEP = ep !== '';
+
+        if (hasA && hasEP)   hasBoth++;
+        if (!hasA)           missingAuthen++;
+        if (!hasEP)          missingEndpoint++;
       }
 
       const newWs = XLSX.utils.aoa_to_sheet(output);
@@ -278,21 +355,24 @@ function process() {
 
       document.getElementById('statsGrid').innerHTML = `
         <div class="stat-card">
+          <div class="stat-num blue">${totalRows}</div>
+          <div class="stat-desc">CID ทั้งหมด<br>จาก HIS</div>
+        </div>
+        <div class="stat-card">
           <div class="stat-num green">${hasBoth}</div>
-          <div class="stat-desc">มีทั้ง AUTHENCODE และ ENDPOINT</div>
+          <div class="stat-desc">มีครบทั้ง<br>AUTHENCODE &amp; ENDPOINT</div>
         </div>
         <div class="stat-card">
-          <div class="stat-num orange">${hasMissing}</div>
-          <div class="stat-desc">ไม่ครบ (ขาดอย่างน้อย 1 รายการ)</div>
+          <div class="stat-num red">${missingAuthen}</div>
+          <div class="stat-desc">ขาด<br>AUTHENCODE</div>
         </div>
         <div class="stat-card">
-          <div class="stat-num gray">${totalRows}</div>
-          <div class="stat-desc">CID ทั้งหมดในไฟล์ที่ 1</div>
+          <div class="stat-num amber">${missingEndpoint}</div>
+          <div class="stat-desc">ขาด<br>ENDPOINT</div>
         </div>
       `;
       document.getElementById('summary').style.display = 'block';
       dlBtn.style.display = 'block';
-
       btn.textContent = '↺ ประมวลผลอีกครั้ง';
       btn.disabled    = false;
 

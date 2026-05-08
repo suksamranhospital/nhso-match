@@ -32,7 +32,7 @@
   .btn-download:hover{background:#166534}
   .summary{display:none;background:#fff;border-radius:12px;border:0.5px solid #ddd;padding:1.25rem}
   .summary-title{font-size:13px;font-weight:700;margin-bottom:12px;color:#333}
-  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
   @media(max-width:520px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
   .stat-card{background:#f8f8f5;border-radius:8px;padding:0.85rem 0.5rem;text-align:center;border:0.5px solid #eee}
   .stat-num{font-size:26px;font-weight:700}
@@ -221,23 +221,25 @@ function process() {
       resultBlob = new Blob([wbArray], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 
       // สรุป
-      let cntTotal=0, hasBoth=0, missingA=0, missingEP=0;
+      let cntTotal=0, hasBoth=0, hasA=0, missingA=0, hasEP=0, missingEP=0;
       for (let i = 1; i < output.length; i++) {
         const cid = String(output[i][6] || '').trim(); // G = index 6
         if (!cid) continue;
-        const a  = String(output[i][7] || ''); // H
-        const ep = String(output[i][8] || ''); // I
+        const a  = String(output[i][7] || ''); // H AUTHENCODE
+        const ep = String(output[i][8] || ''); // I ENDPOINT
         cntTotal++;
         if (a && ep) hasBoth++;
-        if (!a)      missingA++;
-        if (!ep)     missingEP++;
+        if (a)  hasA++;   else missingA++;
+        if (ep) hasEP++;  else missingEP++;
       }
 
       document.getElementById('statsGrid').innerHTML =
-        '<div class="stat-card"><div class="stat-num blue">'  + cntTotal + '</div><div class="stat-desc">CID ทั้งหมด<br>จาก HOSxP</div></div>' +
-        '<div class="stat-card"><div class="stat-num green">' + hasBoth  + '</div><div class="stat-desc">มีครบทั้ง<br>AUTHENCODE &amp; ENDPOINT</div></div>' +
-        '<div class="stat-card"><div class="stat-num red">'   + missingA + '</div><div class="stat-desc">ขาด<br>AUTHENCODE</div></div>' +
-        '<div class="stat-card"><div class="stat-num amber">' + missingEP+ '</div><div class="stat-desc">ขาด<br>ENDPOINT</div></div>';
+        '<div class="stat-card"><div class="stat-num blue">'  + cntTotal  + '</div><div class="stat-desc">CID ทั้งหมด<br>จาก HOSxP</div></div>' +
+        '<div class="stat-card"><div class="stat-num green">' + hasBoth   + '</div><div class="stat-desc">มีครบทั้ง<br>AUTHENCODE &amp; ENDPOINT</div></div>' +
+        '<div class="stat-card"><div class="stat-num green">' + hasA      + '</div><div class="stat-desc">มี<br>AUTHENCODE</div></div>' +
+        '<div class="stat-card"><div class="stat-num red">'   + missingA  + '</div><div class="stat-desc">ขาด<br>AUTHENCODE</div></div>' +
+        '<div class="stat-card"><div class="stat-num green">' + hasEP     + '</div><div class="stat-desc">มี<br>ENDPOINT</div></div>' +
+        '<div class="stat-card"><div class="stat-num amber">' + missingEP + '</div><div class="stat-desc">ขาด<br>ENDPOINT</div></div>';
 
       document.getElementById('summary').style.display = 'block';
       dlBtn.style.display = 'block';

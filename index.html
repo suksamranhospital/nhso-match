@@ -32,7 +32,8 @@
   .btn-download:hover{background:#166534}
   .summary{display:none;background:#fff;border-radius:12px;border:0.5px solid #ddd;padding:1.25rem}
   .summary-title{font-size:13px;font-weight:700;margin-bottom:12px;color:#333}
-  .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .stats-grid{display:grid;grid-template-columns:80px 1fr 1fr;gap:10px;align-items:center}
+  .row-label{font-size:12px;font-weight:700;color:#374151;background:#f0f0eb;border-radius:8px;padding:0.85rem 0.5rem;text-align:center;border:0.5px solid #e0e0d8;line-height:1.4}
   .stat-card{background:#f8f8f5;border-radius:8px;padding:0.85rem 0.5rem;text-align:center;border:0.5px solid #eee}
   .stat-num{font-size:26px;font-weight:700}
   .stat-num.blue{color:#1d4ed8}.stat-num.green{color:#15803d}.stat-num.red{color:#dc2626}.stat-num.amber{color:#d97706}
@@ -233,10 +234,13 @@ function process() {
       }
 
       document.getElementById('statsGrid').innerHTML =
+        '<div class="row-label">สรุปผล</div>' +
         '<div class="stat-card"><div class="stat-num blue">'  + cntTotal  + '</div><div class="stat-desc">CID ทั้งหมด<br>จาก HOSxP</div></div>' +
         '<div class="stat-card"><div class="stat-num green">' + hasBoth   + '</div><div class="stat-desc">มีครบทั้ง<br>AUTHENCODE &amp; ENDPOINT</div></div>' +
+        '<div class="row-label">AUTHEN<br>CODE</div>' +
         '<div class="stat-card"><div class="stat-num green">' + hasA      + '</div><div class="stat-desc">มี<br>AUTHENCODE</div></div>' +
         '<div class="stat-card"><div class="stat-num red">'   + missingA  + '</div><div class="stat-desc">ขาด<br>AUTHENCODE</div></div>' +
+        '<div class="row-label">END<br>POINT</div>' +
         '<div class="stat-card"><div class="stat-num green">' + hasEP     + '</div><div class="stat-desc">มี<br>ENDPOINT</div></div>' +
         '<div class="stat-card"><div class="stat-num amber">' + missingEP + '</div><div class="stat-desc">ขาด<br>ENDPOINT</div></div>';
 

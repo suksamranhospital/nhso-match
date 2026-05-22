@@ -55,6 +55,11 @@
   .btn-submit:hover{background:#6d28d9}
   .btn-submit:disabled{background:#a78bfa;cursor:not-allowed}
   .submit-status{font-size:12px;text-align:center;margin-top:8px;min-height:18px;color:#555}
+  .report-input.error{border-color:#ef4444;background:#fef2f2}
+  .report-input.ok{border-color:#22c55e;background:#f0fdf4}
+  .validation-msg{font-size:12px;margin-top:6px;padding:7px 10px;border-radius:7px;text-align:center;display:none}
+  .validation-msg.error{display:block;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5}
+  .validation-msg.ok{display:block;background:#f0fdf4;color:#15803d;border:1px solid #86efac}
   .sent-overlay{display:none;position:absolute;inset:0;background:rgba(255,255,255,0.97);border-radius:12px;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:10}
   .sent-overlay.show{display:flex}
   .sent-icon{font-size:56px;line-height:1}
@@ -144,17 +149,18 @@
     <hr class="report-divider">
     <div class="report-row">
       <div class="report-row-label">🌏 ไม่ใช่คนไทย</div>
-      <input type="number" min="0" class="report-input" id="rptNotThai" placeholder="กรอกตัวเลข">
+      <input type="number" min="0" class="report-input" id="rptNotThai" placeholder="กรอกตัวเลข" oninput="validateSum()">
     </div>
     <div class="report-row">
       <div class="report-row-label">❌ ไม่ได้ authen</div>
-      <input type="number" min="0" class="report-input" id="rptNoAuthen" placeholder="กรอกตัวเลข">
+      <input type="number" min="0" class="report-input" id="rptNoAuthen" placeholder="กรอกตัวเลข" oninput="validateSum()">
     </div>
     <div style="margin-bottom:10px">
       <div class="report-row-label" style="margin-bottom:6px">📝 หมายเหตุ</div>
       <textarea class="report-textarea" id="rptRemark" placeholder="กรอกหมายเหตุ (ถ้ามี)"></textarea>
     </div>
 
+    <div class="validation-msg" id="validationMsg"></div>
     <button class="btn-submit" id="submitBtn">📤 ส่งรายงานการตรวจสอบ Authen</button>
     <div class="submit-status" id="submitStatus"></div>
   </div>
@@ -330,6 +336,9 @@ function process() {
       document.getElementById('rptHasA').textContent      = hasA;
       document.getElementById('rptMissingA').textContent  = missingA;
       document.getElementById('rptNotThai').value  = '';
+      document.getElementById('rptNotThai').className  = 'report-input';
+      document.getElementById('rptNoAuthen').className = 'report-input';
+      document.getElementById('validationMsg').className = 'validation-msg';
       document.getElementById('rptNoAuthen').value = '';
       document.getElementById('submitStatus').textContent = '';
       document.getElementById('reportCard').style.display = 'block';
@@ -342,6 +351,43 @@ function process() {
   }, 50);
 }
 // ส่งข้อมูลไป Google Sheets via Apps Script
+function validateSum() {
+  const missingA = parseInt(document.getElementById('rptMissingA').textContent) || 0;
+  const notThai  = parseInt(document.getElementById('rptNotThai').value)  || 0;
+  const noAuthen = parseInt(document.getElementById('rptNoAuthen').value) || 0;
+  const sum      = notThai + noAuthen;
+
+  const msg    = document.getElementById('validationMsg');
+  const btn    = document.getElementById('submitBtn');
+  const inThai = document.getElementById('rptNotThai');
+  const inAuth = document.getElementById('rptNoAuthen');
+
+  // ยังไม่ได้กรอกทั้งคู่
+  if (document.getElementById('rptNotThai').value === '' &&
+      document.getElementById('rptNoAuthen').value === '') {
+    msg.className = 'validation-msg';
+    inThai.className = 'report-input';
+    inAuth.className = 'report-input';
+    btn.disabled = false;
+    return;
+  }
+
+  if (sum === missingA) {
+    msg.className = 'validation-msg ok';
+    msg.textContent = '✅ ผลรวมถูกต้อง (' + notThai + ' + ' + noAuthen + ' = ' + missingA + ')';
+    inThai.className = 'report-input ok';
+    inAuth.className = 'report-input ok';
+    btn.disabled = false;
+  } else {
+    msg.className = 'validation-msg error';
+    msg.textContent = '⚠️ ผลรวม ' + notThai + ' + ' + noAuthen + ' = ' + sum +
+                      ' ≠ ' + missingA + ' (ไม่มี Authen) — กรุณาแก้ไขก่อนส่ง';
+    inThai.className = 'report-input error';
+    inAuth.className = 'report-input error';
+    btn.disabled = true;
+  }
+}
+
 document.getElementById('submitBtn').addEventListener('click', async () => {
   const btn    = document.getElementById('submitBtn');
   const status = document.getElementById('submitStatus');

@@ -30,11 +30,6 @@
   .btn-run:not(:disabled):hover{background:#1e40af}
   .btn-download{display:none;width:100%;padding:0.85rem;font-size:15px;font-weight:600;background:#15803d;color:#fff;border:none;border-radius:10px;cursor:pointer;transition:background 0.15s}
   .btn-download:hover{background:#166534}
-  .btn-report{display:none;width:100%;padding:0.85rem;font-size:15px;font-weight:600;background:#1d4ed8;color:#fff;border:none;border-radius:10px;cursor:pointer;transition:background 0.15s;margin-top:8px}
-  .btn-report:hover{background:#1e40af}
-  .report-select{font-size:14px;font-weight:600;border:1.5px solid #d1d5db;border-radius:6px;padding:7px 10px;width:100%;background:#fff;outline:none;color:#374151;cursor:pointer;transition:border-color 0.15s}
-  .report-select:focus{border-color:#3b82f6}
-  .report-select.error{border-color:#ef4444;background:#fef2f2}
   .summary{display:none;background:#fff;border-radius:12px;border:0.5px solid #ddd;padding:1.25rem}
   .summary-title{font-size:13px;font-weight:700;margin-bottom:12px;color:#333}
   .stats-grid{display:grid;grid-template-columns:80px 1fr 1fr;gap:10px;align-items:center}
@@ -60,6 +55,9 @@
   .btn-submit:hover{background:#6d28d9}
   .btn-submit:disabled{background:#a78bfa;cursor:not-allowed}
   .submit-status{font-size:12px;text-align:center;margin-top:8px;min-height:18px;color:#555}
+  .report-select{font-size:14px;font-weight:600;border:1.5px solid #d1d5db;border-radius:6px;padding:7px 10px;width:100%;background:#fff;outline:none;color:#374151;cursor:pointer;transition:border-color 0.15s}
+  .report-select:focus{border-color:#3b82f6}
+  .report-select.error{border-color:#ef4444;background:#fef2f2}
   .report-input.error{border-color:#ef4444;background:#fef2f2}
   .report-input.ok{border-color:#22c55e;background:#f0fdf4}
   .validation-msg{font-size:12px;margin-top:6px;padding:7px 10px;border-radius:7px;text-align:center;display:none}
@@ -119,7 +117,6 @@
   </div>
 
   <button class="btn-download" id="dlBtn">⬇ ดาวน์โหลดไฟล์ผลลัพธ์ (output_matched.xlsx)</button>
-  <button class="btn-report" id="reportBtn">📋 รายงาน Authen (เฉพาะเจ้าหน้าที่ห้องบัตร)</button>
 
   <!-- รายงาน Authen -->
   <div class="report-card" id="reportCard">
@@ -133,7 +130,7 @@
       <button class="btn-sent-reset" id="sentResetBtn">🔄 ประมวลผลรายงานใหม่</button>
     </div>
 
-    <div class="report-title">รายงาน Authen (เฉพาะเจ้าหน้าที่ห้องบัตร) </div>
+    <div class="report-title">รายงาน authen</div>
 
     <div class="report-row">
       <div class="report-row-label">📅 วันที่ / เวลา</div>
@@ -167,9 +164,9 @@
     </div>
 
     <div class="validation-msg" id="validationMsg"></div>
-    <div class="report-row" style="margin-top:4px;margin-bottom:4px">
+    <div class="report-row" style="margin-top:8px">
       <div class="report-row-label">👤 ผู้รายงาน</div>
-      <select class="report-select" id="rptReporter">
+      <select class="report-select" id="rptReporter" onchange="validateSum()">
         <option value="">-- เลือกผู้รายงาน --</option>
         <option value="ราตรี คงสุทธิ์">ราตรี คงสุทธิ์</option>
         <option value="ศศิธร ทองแพ">ศศิธร ทองแพ</option>
@@ -340,7 +337,6 @@ function process() {
 
       document.getElementById('summary').style.display = 'block';
       dlBtn.style.display = 'block';
-      document.getElementById('reportBtn').style.display = 'block';
       btn.textContent = '↺ ประมวลผลอีกครั้ง';
       btn.disabled = false;
 
@@ -356,9 +352,12 @@ function process() {
       document.getElementById('rptNotThai').className  = 'report-input';
       document.getElementById('rptNoAuthen').className = 'report-input';
       document.getElementById('validationMsg').className = 'validation-msg';
+      document.getElementById('rptReporter').value = '';
+      document.getElementById('rptReporter').className = 'report-select';
       document.getElementById('rptNoAuthen').value = '';
       document.getElementById('submitStatus').textContent = '';
-      // reportCard ซ่อนไว้ก่อน รอผู้ใช้กดปุ่มรายงาน
+      document.getElementById('reportCard').style.display = 'block';
+      document.getElementById('submitBtn').disabled = true;
 
     } catch(err) {
       alert('เกิดข้อผิดพลาด: ' + err.message);
@@ -368,63 +367,67 @@ function process() {
   }, 50);
 }
 // ส่งข้อมูลไป Google Sheets via Apps Script
-document.getElementById('reportBtn').addEventListener('click', () => {
-  document.getElementById('reportCard').style.display = 'block';
-  document.getElementById('reportBtn').style.display = 'none';
-  document.getElementById('reportCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
-});
-
 function validateSum() {
-  const missingA = parseInt(document.getElementById('rptMissingA').textContent) || 0;
-  const notThai  = parseInt(document.getElementById('rptNotThai').value)  || 0;
-  const noAuthen = parseInt(document.getElementById('rptNoAuthen').value) || 0;
-  const sum      = notThai + noAuthen;
+  const missingA  = parseInt(document.getElementById('rptMissingA').textContent) || 0;
+  const notThaiEl = document.getElementById('rptNotThai');
+  const noAuthenEl= document.getElementById('rptNoAuthen');
+  const reporterEl= document.getElementById('rptReporter');
+  const notThai   = parseInt(notThaiEl.value)  || 0;
+  const noAuthen  = parseInt(noAuthenEl.value) || 0;
+  const sum       = notThai + noAuthen;
+  const msg       = document.getElementById('validationMsg');
+  const btn       = document.getElementById('submitBtn');
 
-  const msg    = document.getElementById('validationMsg');
-  const btn    = document.getElementById('submitBtn');
-  const inThai = document.getElementById('rptNotThai');
-  const inAuth = document.getElementById('rptNoAuthen');
+  const emptyNotThai   = notThaiEl.value === '';
+  const emptyNoAuthen  = noAuthenEl.value === '';
+  const emptyReporter  = reporterEl.value === '';
 
-  // ยังไม่ได้กรอกทั้งคู่
-  if (document.getElementById('rptNotThai').value === '' &&
-      document.getElementById('rptNoAuthen').value === '') {
+  // ยังไม่ได้กรอกเลย — ปิดปุ่ม ไม่แสดง msg
+  if (emptyNotThai && emptyNoAuthen && emptyReporter) {
     msg.className = 'validation-msg';
-    inThai.className = 'report-input';
-    inAuth.className = 'report-input';
-    btn.disabled = false;
+    notThaiEl.className  = 'report-input';
+    noAuthenEl.className = 'report-input';
+    reporterEl.className = 'report-select';
+    btn.disabled = true;
     return;
   }
 
-  if (sum === missingA) {
-    msg.className = 'validation-msg ok';
-    msg.textContent = '✅ ผลรวมถูกต้อง (' + notThai + ' + ' + noAuthen + ' = ' + missingA + ')';
-    inThai.className = 'report-input ok';
-    inAuth.className = 'report-input ok';
-    btn.disabled = false;
+  const errors = [];
+
+  // ตรวจช่องที่ว่าง
+  if (emptyNotThai)  { notThaiEl.className  = 'report-input error'; errors.push('ไม่ใช่คนไทย'); }
+  else               { notThaiEl.className  = 'report-input'; }
+
+  if (emptyNoAuthen) { noAuthenEl.className = 'report-input error'; errors.push('ไม่ได้ Authen'); }
+  else               { noAuthenEl.className = 'report-input'; }
+
+  if (emptyReporter) { reporterEl.className = 'report-select error'; errors.push('ผู้รายงาน'); }
+  else               { reporterEl.className = 'report-select'; }
+
+  // ตรวจผลรวม (เฉพาะเมื่อกรอกทั้งสองช่องแล้ว)
+  if (!emptyNotThai && !emptyNoAuthen && sum !== missingA) {
+    notThaiEl.className  = 'report-input error';
+    noAuthenEl.className = 'report-input error';
+    errors.push('ผลรวม ' + notThai + ' + ' + noAuthen + ' = ' + sum + ' ≠ ' + missingA + ' (ไม่มี Authen)');
+  } else if (!emptyNotThai && !emptyNoAuthen && sum === missingA) {
+    notThaiEl.className  = 'report-input ok';
+    noAuthenEl.className = 'report-input ok';
+  }
+
+  if (errors.length > 0) {
+    msg.className   = 'validation-msg error';
+    msg.textContent = '⚠️ กรุณากรอกให้ครบ: ' + errors.join(' / ');
+    btn.disabled    = true;
   } else {
-    msg.className = 'validation-msg error';
-    msg.textContent = '⚠️ ผลรวม ' + notThai + ' + ' + noAuthen + ' = ' + sum +
-                      ' ≠ ' + missingA + ' (ไม่มี Authen) — กรุณาแก้ไขก่อนส่ง';
-    inThai.className = 'report-input error';
-    inAuth.className = 'report-input error';
-    btn.disabled = true;
+    msg.className   = 'validation-msg ok';
+    msg.textContent = '✅ ข้อมูลครบถ้วน (' + notThai + ' + ' + noAuthen + ' = ' + missingA + ')';
+    btn.disabled    = false;
   }
 }
 
 document.getElementById('submitBtn').addEventListener('click', async () => {
   const btn    = document.getElementById('submitBtn');
   const status = document.getElementById('submitStatus');
-
-  // ตรวจสอบผู้รายงาน
-  const reporter = document.getElementById('rptReporter').value;
-  if (!reporter) {
-    document.getElementById('rptReporter').className = 'report-select error';
-    status.style.color = '#dc2626';
-    status.textContent = '⚠️ กรุณาเลือกผู้รายงานก่อนส่ง';
-    return;
-  }
-  document.getElementById('rptReporter').className = 'report-select';
-  status.textContent = '';
 
   const datetime = document.getElementById('rptDatetime').textContent;
   const total    = document.getElementById('rptTotal').textContent;
@@ -442,6 +445,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbzy8F-YbGu4pgdLfJa2V9SfcR2CrRzXj8RrndE3yOQzPUe-HCZJ4W7p_5rkDVkq2bJh_w/exec';
 
   try {
+    const reporter = document.getElementById('rptReporter').value;
     const payload = { datetime, total, hasA, missingA, notThai, noAuthen, remark, reporter };
     await fetch(GAS_URL, {
       method: 'POST',
@@ -464,9 +468,10 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
 document.getElementById('sentResetBtn').addEventListener('click', () => {
   // ซ่อน overlay และ report card
   document.getElementById('sentOverlay').classList.remove('show');
-  document.getElementById('reportCard').style.display = 'none';
   document.getElementById('rptReporter').value = '';
   document.getElementById('rptReporter').className = 'report-select';
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('reportCard').style.display = 'none';
   // reset ฟอร์มและ summary
   document.getElementById('summary').style.display = 'none';
   document.getElementById('dlBtn').style.display = 'none';
@@ -485,7 +490,6 @@ document.getElementById('sentResetBtn').addEventListener('click', () => {
   document.getElementById('file1').value = '';
   document.getElementById('file2').value = '';
   wb1Data = null; wb2Data = null; resultBlob = null;
-  document.getElementById('reportBtn').style.display = 'none';
   document.getElementById('runBtn').disabled = true;
   document.getElementById('runBtn').textContent = 'ประมวลผล';
 });

@@ -30,6 +30,11 @@
   .btn-run:not(:disabled):hover{background:#1e40af}
   .btn-download{display:none;width:100%;padding:0.85rem;font-size:15px;font-weight:600;background:#15803d;color:#fff;border:none;border-radius:10px;cursor:pointer;transition:background 0.15s}
   .btn-download:hover{background:#166534}
+  .btn-report{display:none;width:100%;padding:0.85rem;font-size:15px;font-weight:600;background:#1d4ed8;color:#fff;border:none;border-radius:10px;cursor:pointer;transition:background 0.15s;margin-top:8px}
+  .btn-report:hover{background:#1e40af}
+  .report-select{font-size:14px;font-weight:600;border:1.5px solid #d1d5db;border-radius:6px;padding:7px 10px;width:100%;background:#fff;outline:none;color:#374151;cursor:pointer;transition:border-color 0.15s}
+  .report-select:focus{border-color:#3b82f6}
+  .report-select.error{border-color:#ef4444;background:#fef2f2}
   .summary{display:none;background:#fff;border-radius:12px;border:0.5px solid #ddd;padding:1.25rem}
   .summary-title{font-size:13px;font-weight:700;margin-bottom:12px;color:#333}
   .stats-grid{display:grid;grid-template-columns:80px 1fr 1fr;gap:10px;align-items:center}
@@ -114,6 +119,7 @@
   </div>
 
   <button class="btn-download" id="dlBtn">⬇ ดาวน์โหลดไฟล์ผลลัพธ์ (output_matched.xlsx)</button>
+  <button class="btn-report" id="reportBtn">📋 รายงาน Authen <span style="font-size:12px;opacity:0.85">(เฉพาะเจ้าหน้าที่ห้องบัตร)</span></button>
 
   <!-- รายงาน Authen -->
   <div class="report-card" id="reportCard">
@@ -161,6 +167,16 @@
     </div>
 
     <div class="validation-msg" id="validationMsg"></div>
+    <div class="report-row" style="margin-top:4px;margin-bottom:4px">
+      <div class="report-row-label">👤 ผู้รายงาน</div>
+      <select class="report-select" id="rptReporter">
+        <option value="">-- เลือกผู้รายงาน --</option>
+        <option value="ราตรี คงสุทธิ์">ราตรี คงสุทธิ์</option>
+        <option value="ศศิธร ทองแพ">ศศิธร ทองแพ</option>
+        <option value="อนัญญา มงคล">อนัญญา มงคล</option>
+        <option value="วารีซา โคกเคียน">วารีซา โคกเคียน</option>
+      </select>
+    </div>
     <button class="btn-submit" id="submitBtn">📤 ส่งรายงานการตรวจสอบ Authen</button>
     <div class="submit-status" id="submitStatus"></div>
   </div>
@@ -324,6 +340,7 @@ function process() {
 
       document.getElementById('summary').style.display = 'block';
       dlBtn.style.display = 'block';
+      document.getElementById('reportBtn').style.display = 'block';
       btn.textContent = '↺ ประมวลผลอีกครั้ง';
       btn.disabled = false;
 
@@ -341,7 +358,7 @@ function process() {
       document.getElementById('validationMsg').className = 'validation-msg';
       document.getElementById('rptNoAuthen').value = '';
       document.getElementById('submitStatus').textContent = '';
-      document.getElementById('reportCard').style.display = 'block';
+      // reportCard ซ่อนไว้ก่อน รอผู้ใช้กดปุ่มรายงาน
 
     } catch(err) {
       alert('เกิดข้อผิดพลาด: ' + err.message);
@@ -351,6 +368,12 @@ function process() {
   }, 50);
 }
 // ส่งข้อมูลไป Google Sheets via Apps Script
+document.getElementById('reportBtn').addEventListener('click', () => {
+  document.getElementById('reportCard').style.display = 'block';
+  document.getElementById('reportBtn').style.display = 'none';
+  document.getElementById('reportCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
 function validateSum() {
   const missingA = parseInt(document.getElementById('rptMissingA').textContent) || 0;
   const notThai  = parseInt(document.getElementById('rptNotThai').value)  || 0;
@@ -392,6 +415,17 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
   const btn    = document.getElementById('submitBtn');
   const status = document.getElementById('submitStatus');
 
+  // ตรวจสอบผู้รายงาน
+  const reporter = document.getElementById('rptReporter').value;
+  if (!reporter) {
+    document.getElementById('rptReporter').className = 'report-select error';
+    status.style.color = '#dc2626';
+    status.textContent = '⚠️ กรุณาเลือกผู้รายงานก่อนส่ง';
+    return;
+  }
+  document.getElementById('rptReporter').className = 'report-select';
+  status.textContent = '';
+
   const datetime = document.getElementById('rptDatetime').textContent;
   const total    = document.getElementById('rptTotal').textContent;
   const hasA     = document.getElementById('rptHasA').textContent;
@@ -408,7 +442,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbzy8F-YbGu4pgdLfJa2V9SfcR2CrRzXj8RrndE3yOQzPUe-HCZJ4W7p_5rkDVkq2bJh_w/exec';
 
   try {
-    const payload = { datetime, total, hasA, missingA, notThai, noAuthen, remark };
+    const payload = { datetime, total, hasA, missingA, notThai, noAuthen, remark, reporter };
     await fetch(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -431,6 +465,8 @@ document.getElementById('sentResetBtn').addEventListener('click', () => {
   // ซ่อน overlay และ report card
   document.getElementById('sentOverlay').classList.remove('show');
   document.getElementById('reportCard').style.display = 'none';
+  document.getElementById('rptReporter').value = '';
+  document.getElementById('rptReporter').className = 'report-select';
   // reset ฟอร์มและ summary
   document.getElementById('summary').style.display = 'none';
   document.getElementById('dlBtn').style.display = 'none';
@@ -449,6 +485,7 @@ document.getElementById('sentResetBtn').addEventListener('click', () => {
   document.getElementById('file1').value = '';
   document.getElementById('file2').value = '';
   wb1Data = null; wb2Data = null; resultBlob = null;
+  document.getElementById('reportBtn').style.display = 'none';
   document.getElementById('runBtn').disabled = true;
   document.getElementById('runBtn').textContent = 'ประมวลผล';
 });
